@@ -3,22 +3,21 @@
   Источник 1: Аналоговый шум АЦП (пин 36, floating).
   Источник 2: Аппаратный ГСЧ esp_random() (физический шум чипа).
   Алгоритм: XOR двух источников -> LSB -> Фон Нейман -> SHA-256 -> USB.
-  Гарантированно выдаёт энтропию даже если один источник "залип".
 */
 
 #include "mbedtls/sha256.h"
 
-// ================= КОНФИГУРАЦИЯ =================
+// КОНФИГУРАЦИЯ 
 #define ADC_NOISE_PIN    36      // Пин для аналогового шума (ничего не подключать!)
 #define BUFFER_BITS      256     // 32 байта для SHA-256
 
-// ================= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 uint8_t entropyBuffer[BUFFER_BITS / 8] = {0};
 size_t collectedBits = 0;
 bool lastBit = 0;
 bool hasLastBit = false;
 
-// ================= 1. ГИБРИДНЫЙ ИСТОЧНИК ЭНТРОПИИ =================
+// 1. ГИБРИДНЫЙ ИСТОЧНИК ЭНТРОПИИ 
 bool readHybridNoiseBit() {
   // Источник A: сырое значение АЦП с плавающего пина
   static uint32_t adcSeed = 0;
@@ -36,7 +35,7 @@ bool readHybridNoiseBit() {
   return (mixed & 0x01);
 }
 
-// ================= 2. ФОН НЕЙМАН =================
+//  2. ФОН НЕЙМАН
 bool vonNeumannCorrector(bool currentBit, bool &outputBit) {
   if (!hasLastBit) {
     lastBit = currentBit;
@@ -52,7 +51,7 @@ bool vonNeumannCorrector(bool currentBit, bool &outputBit) {
   return false;
 }
 
-// ================= 3. УПАКОВКА БИТОВ В БУФЕР =================
+// 3. УПАКОВКА БИТОВ В БУФЕР
 void packBitIntoBuffer(bool bit) {
   size_t byteIndex = collectedBits / 8;
   size_t bitIndex = collectedBits % 8;
@@ -64,7 +63,7 @@ void packBitIntoBuffer(bool bit) {
   collectedBits++;
 }
 
-// ================= 4. SHA-256 И ВЫВОД =================
+// 4. SHA-256 И ВЫВОД 
 void hashAndOutput() {
   if (collectedBits < BUFFER_BITS) return;
   
@@ -89,7 +88,7 @@ void hashAndOutput() {
   memset(entropyBuffer, 0, sizeof(entropyBuffer));
 }
 
-// ================= SETUP И LOOP =================
+// SETUP И LOOP
 void setup() {
   Serial.begin(115200);
   while (!Serial); // Ждём открытия порта (для некоторых плат)
@@ -120,3 +119,4 @@ void loop() {
   // Небольшая пауза для стабильности АЦП
   delayMicroseconds(50);
 }
+
